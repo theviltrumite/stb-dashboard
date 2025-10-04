@@ -1,218 +1,136 @@
-import postgres from 'postgres';
-import {
-  CustomerField,
-  CustomersTableType,
-  InvoiceForm,
-  InvoicesTable,
-  LatestInvoiceRaw,
-  Revenue,
+// app/lib/data.ts
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import type {
+  Organization,
+  Project,
+  OrganizationUsage,
+  ProjectForm,
 } from './definitions';
-import { formatCurrency } from './utils';
 
-const sql = postgres(process.env.POSTGRES_URL!, { ssl: 'require' });
+export async function getOrganizationsByOwner(ownerId: string): Promise<Organization[]> {
+  const { data, error } = await supabaseAdmin
+    .from<Organization>('organizations')
+    .select('*')
+    .eq('owner_id', ownerId)
+    .eq('is_active', true);
 
-export async function fetchRevenue() {
-  try {
-    // Artificially delay a response for demo purposes.
-    // Don't do this in production :)
-
-    // console.log('Fetching revenue data...');
-    // await new Promise((resolve) => setTimeout(resolve, 3000));
-
-    const data = await sql<Revenue[]>`SELECT * FROM revenue`;
-
-    // console.log('Data fetch completed after 3 seconds.');
-
-    return data;
-  } catch (error) {
-    console.error('Database Error:', error);
-    throw new Error('Failed to fetch revenue data.');
-  }
+  if (error) throw new Error(error.message);
+  return data ?? [];
 }
 
-export async function fetchLatestInvoices() {
-  try {
-    const data = await sql<LatestInvoiceRaw[]>`
-      SELECT invoices.amount, customers.name, customers.image_url, customers.email, invoices.id
-      FROM invoices
-      JOIN customers ON invoices.customer_id = customers.id
-      ORDER BY invoices.date DESC
-      LIMIT 5`;
+export async function getOrganizationById(orgId: string): Promise<Organization | null> {
+  const { data, error } = await supabaseAdmin
+    .from<Organization>('organizations')
+    .select('*')
+    .eq('id', orgId)
+    .maybeSingle();
 
-    const latestInvoices = data.map((invoice) => ({
-      ...invoice,
-      amount: formatCurrency(invoice.amount),
-    }));
-    return latestInvoices;
-  } catch (error) {
-    console.error('Database Error:', error);
-    throw new Error('Failed to fetch the latest invoices.');
-  }
+  if (error) throw new Error(error.message);
+  return data ?? null;
 }
 
-export async function fetchCardData() {
-  try {
-    // You can probably combine these into a single SQL query
-    // However, we are intentionally splitting them to demonstrate
-    // how to initialize multiple queries in parallel with JS.
-    const invoiceCountPromise = sql`SELECT COUNT(*) FROM invoices`;
-    const customerCountPromise = sql`SELECT COUNT(*) FROM customers`;
-    const invoiceStatusPromise = sql`SELECT
-         SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END) AS "paid",
-         SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END) AS "pending"
-         FROM invoices`;
+export async function getProjects(orgId: string): Promise<Project[]> {
+  const { data, error } = await supabaseAdmin
+    .from<Project>('projects')
+    .select('*')
+    .eq('organization_id', orgId);
 
-    const data = await Promise.all([
-      invoiceCountPromise,
-      customerCountPromise,
-      invoiceStatusPromise,
-    ]);
-
-    const numberOfInvoices = Number(data[0][0].count ?? '0');
-    const numberOfCustomers = Number(data[1][0].count ?? '0');
-    const totalPaidInvoices = formatCurrency(data[2][0].paid ?? '0');
-    const totalPendingInvoices = formatCurrency(data[2][0].pending ?? '0');
-
-    return {
-      numberOfCustomers,
-      numberOfInvoices,
-      totalPaidInvoices,
-      totalPendingInvoices,
-    };
-  } catch (error) {
-    console.error('Database Error:', error);
-    throw new Error('Failed to fetch card data.');
-  }
+  if (error) throw new Error(error.message);
+  return data ?? [];
 }
 
-const ITEMS_PER_PAGE = 6;
-export async function fetchFilteredInvoices(
-  query: string,
-  currentPage: number,
-) {
-  const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+export async function createProject(payload: ProjectForm): Promise<Project> {
+  const { data, error } = await supabaseAdmin
+    .from<Project>('projects')
+    .insert({
+      name: payload.name,
+      organization_id: payload.organization_id,
+      is_active: payload.is_active ?? true,
+    })
+    .select()
+    .single();
 
-  try {
-    const invoices = await sql<InvoicesTable[]>`
-      SELECT
-        invoices.id,
-        invoices.amount,
-        invoices.date,
-        invoices.status,
-        customers.name,
-        customers.email,
-        customers.image_url
-      FROM invoices
-      JOIN customers ON invoices.customer_id = customers.id
-      WHERE
-        customers.name ILIKE ${`%${query}%`} OR
-        customers.email ILIKE ${`%${query}%`} OR
-        invoices.amount::text ILIKE ${`%${query}%`} OR
-        invoices.date::text ILIKE ${`%${query}%`} OR
-        invoices.status ILIKE ${`%${query}%`}
-      ORDER BY invoices.date DESC
-      LIMIT ${ITEMS_PER_PAGE} OFFSET ${offset}
-    `;
-
-    return invoices;
-  } catch (error) {
-    console.error('Database Error:', error);
-    throw new Error('Failed to fetch invoices.');
-  }
+  if (error) throw new Error(error.message);
+  return data;
 }
 
-export async function fetchInvoicesPages(query: string) {
-  try {
-    const data = await sql`SELECT COUNT(*)
-    FROM invoices
-    JOIN customers ON invoices.customer_id = customers.id
-    WHERE
-      customers.name ILIKE ${`%${query}%`} OR
-      customers.email ILIKE ${`%${query}%`} OR
-      invoices.amount::text ILIKE ${`%${query}%`} OR
-      invoices.date::text ILIKE ${`%${query}%`} OR
-      invoices.status ILIKE ${`%${query}%`}
-  `;
+export async function updateProject(id: string, payload: Partial<ProjectForm>): Promise<Project> {
+  const { data, error } = await supabaseAdmin
+    .from<Project>('projects')
+    .update({
+      name: payload.name,
+      is_active: payload.is_active,
+    })
+    .eq('id', id)
+    .select()
+    .single();
 
-    const totalPages = Math.ceil(Number(data[0].count) / ITEMS_PER_PAGE);
-    return totalPages;
-  } catch (error) {
-    console.error('Database Error:', error);
-    throw new Error('Failed to fetch total number of invoices.');
-  }
+  if (error) throw new Error(error.message);
+  return data;
 }
 
-export async function fetchInvoiceById(id: string) {
-  try {
-    const data = await sql<InvoiceForm[]>`
-      SELECT
-        invoices.id,
-        invoices.customer_id,
-        invoices.amount,
-        invoices.status
-      FROM invoices
-      WHERE invoices.id = ${id};
-    `;
-
-    const invoice = data.map((invoice) => ({
-      ...invoice,
-      // Convert amount from cents to dollars
-      amount: invoice.amount / 100,
-    }));
-
-    return invoice[0];
-  } catch (error) {
-    console.error('Database Error:', error);
-    throw new Error('Failed to fetch invoice.');
-  }
+export async function deleteProject(id: string): Promise<void> {
+  const { error } = await supabaseAdmin.from('projects').delete().eq('id', id);
+  if (error) throw new Error(error.message);
 }
 
-export async function fetchCustomers() {
-  try {
-    const customers = await sql<CustomerField[]>`
-      SELECT
-        id,
-        name
-      FROM customers
-      ORDER BY name ASC
-    `;
+/**
+ * Get usage rows for an organization (ordered desc by period_start_at)
+ */
+export async function getOrganizationUsage(orgId: string): Promise<OrganizationUsage[]> {
+  const { data, error } = await supabaseAdmin
+    .from<OrganizationUsage>('organization_usage')
+    .select('*')
+    .eq('organization_id', orgId)
+    .order('period_start_at', { ascending: false });
 
-    return customers;
-  } catch (err) {
-    console.error('Database Error:', err);
-    throw new Error('Failed to fetch all customers.');
-  }
+  if (error) throw new Error(error.message);
+  return data ?? [];
 }
 
-export async function fetchFilteredCustomers(query: string) {
-  try {
-    const data = await sql<CustomersTableType[]>`
-		SELECT
-		  customers.id,
-		  customers.name,
-		  customers.email,
-		  customers.image_url,
-		  COUNT(invoices.id) AS total_invoices,
-		  SUM(CASE WHEN invoices.status = 'pending' THEN invoices.amount ELSE 0 END) AS total_pending,
-		  SUM(CASE WHEN invoices.status = 'paid' THEN invoices.amount ELSE 0 END) AS total_paid
-		FROM customers
-		LEFT JOIN invoices ON customers.id = invoices.customer_id
-		WHERE
-		  customers.name ILIKE ${`%${query}%`} OR
-        customers.email ILIKE ${`%${query}%`}
-		GROUP BY customers.id, customers.name, customers.email, customers.image_url
-		ORDER BY customers.name ASC
-	  `;
+/**
+ * Increment usage for the current monthly period.
+ * - If a row exists for (organization_id, period_start_at) => update request_count & api_calls
+ * - Otherwise insert a new row with period_start_at = start of month UTC
+ */
+export async function incrementOrganizationUsage(orgId: string, incrementBy = 1): Promise<void> {
+  // Calculate period boundaries in UTC (start and end of current month)
+  const now = new Date();
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0));
+  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59, 999));
 
-    const customers = data.map((customer) => ({
-      ...customer,
-      total_pending: formatCurrency(customer.total_pending),
-      total_paid: formatCurrency(customer.total_paid),
-    }));
+  const periodStartIso = start.toISOString();
+  const periodEndIso = end.toISOString();
 
-    return customers;
-  } catch (err) {
-    console.error('Database Error:', err);
-    throw new Error('Failed to fetch customer table.');
+  // Check if exists
+  const { data: existing, error: selErr } = await supabaseAdmin
+    .from('organization_usage')
+    .select('*')
+    .eq('organization_id', orgId)
+    .eq('period_start_at', periodStartIso)
+    .maybeSingle();
+
+  if (selErr) throw new Error(selErr.message);
+
+  if (!existing) {
+    const { error: insErr } = await supabaseAdmin.from('organization_usage').insert({
+      organization_id: orgId,
+      period_start_at: periodStartIso,
+      period_end_at: periodEndIso,
+      request_count: incrementBy,
+      api_calls: incrementBy,
+      data_stored_mb: 0,
+    });
+    if (insErr) throw new Error(insErr.message);
+  } else {
+    const { error: updErr } = await supabaseAdmin
+      .from('organization_usage')
+      .update({
+        request_count: (existing.request_count ?? 0) + incrementBy,
+        api_calls: (existing.api_calls ?? 0) + incrementBy,
+      })
+      .eq('organization_id', orgId)
+      .eq('period_start_at', periodStartIso);
+    if (updErr) throw new Error(updErr.message);
   }
 }
