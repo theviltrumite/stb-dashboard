@@ -60,7 +60,7 @@ interface WorldProps {
   data: Position[];
 }
 
-let numbersOfRings = [0];
+const numbersOfRings = [0];
 
 export function Globe({ globeConfig, data }: WorldProps) {
   const globeRef = useRef<ThreeGlobe | null>(null);
@@ -88,6 +88,7 @@ export function Globe({ globeConfig, data }: WorldProps) {
   useEffect(() => {
     if (!globeRef.current && groupRef.current) {
       globeRef.current = new ThreeGlobe();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (groupRef.current as any).add(globeRef.current);
       setIsInitialized(true);
     }
@@ -164,6 +165,7 @@ export function Globe({ globeConfig, data }: WorldProps) {
       .arcStartLat((d) => (d as { startLat: number }).startLat * 1)
       .arcStartLng((d) => (d as { startLng: number }).startLng * 1)
       .arcEndLat((d) => (d as { endLat: number }).endLat * 1)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .arcEndLng((d) => (d as { endLng: number }).endLng * 1)
       .arcColor((e: any) => (e as { color: string }).color)
       .arcAltitude((e) => (e as { arcAlt: number }).arcAlt * 1)
