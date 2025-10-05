@@ -441,7 +441,6 @@ export default function Page() {
         />
       </Head>
       <main className="flex min-h-screen flex-col p-6 bg-gradient-to-b from-white to-gray-50">
-        {/* 🔹 Logo Banner */}
         <motion.div
           initial={{ y: -30, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -451,9 +450,7 @@ export default function Page() {
           <STBLogo />
         </motion.div>
 
-        {/* 🔸 Hero Section */}
         <div className="mt-6 flex grow flex-col gap-6 md:flex-row items-stretch">
-          {/* ✨ Left Side - Text & CTA */}
           <motion.div
             initial={{ x: -30, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
@@ -483,7 +480,6 @@ export default function Page() {
             </motion.div>
           </motion.div>
 
-          {/* 🖼️ Right Side - Images */}
           <motion.div
             initial={{ x: 30, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
@@ -491,7 +487,6 @@ export default function Page() {
             className="flex items-center justify-center lg:w-3/5 lg:px-28 lg:py-12"
           >
 
-            {/* 🌍 WorldMap (Desktop) */}
             <div className="hidden lg:block w-full">
               <div className="pt-10 pb-20 dark:bg-black bg-transparent w-full">
                 <div className="max-w-7xl mx-auto text-center">
@@ -553,13 +548,10 @@ export default function Page() {
               </div>
             </div>
 
-            {/* 🪐 Globe (Mobile) */}
             <div className="block md:hidden relative w-full min-h-[400px] py-10 bg-transparent dark:bg-transparent">
               <div className="max-w-7xl mx-auto w-full relative overflow-hidden h-full">
-                {/* Fade gradient overlay */}
                 <div className="absolute w-full bottom-0 inset-x-0 h-40 bg-gradient-to-b pointer-events-none select-none from-transparent dark:to-black z-40" />
 
-                {/* Globe container */}
                 <div className="relative w-full h-[300px] z-10 flex items-center justify-center">
                   <World data={sampleArcs} globeConfig={globeConfig} />
                 </div>

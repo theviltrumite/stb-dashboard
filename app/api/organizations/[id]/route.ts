@@ -3,9 +3,8 @@ import { cookies } from 'next/headers';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { NextRequest, NextResponse } from "next/server";
 
-// PATCH: Organizasyon adını güncelleme
 export async function PATCH(req: NextRequest, context: { params: Promise<{ id: string }> }) {
-    const { id } = await context.params; // ✅ Promise'i bekliyoruz
+    const { id } = await context.params;
     const cookieStore = cookies();
     const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
 
@@ -18,7 +17,7 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
     const { data, error } = await supabase
         .from('organizations')
         .update({ name })
-        .eq('id', id)              // ✅ burada artık 'id' kullanıyoruz
+        .eq('id', id) 
         .eq('owner_id', user.id)
         .select()
         .single();
@@ -30,7 +29,7 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
 
 // DELETE: Organizasyonu silme
 export async function DELETE(_: NextRequest, context: { params: Promise<{ id: string }> }) {
-    const { id } = await context.params; // ✅ burada da Promise'i çözüyoruz
+    const { id } = await context.params;
     const cookieStore = cookies();
     const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
 
