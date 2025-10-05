@@ -4,7 +4,7 @@ import { cookies } from 'next/headers';
 import { getOrganizationsByOwner } from '@/app/lib/data';
 
 export async function POST(req: Request) {
-    const cookieStore = await cookies();
+    const cookieStore = cookies(); // ✅ await kaldırıldı
     const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
 
     const {
@@ -15,34 +15,21 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await req.json();
-    const { name, organization_id, is_active } = body;
-
-    if (!name || !organization_id) {
-        return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
+    const { name } = await req.json();
+    if (!name) {
+        return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
 
-    const organizations = await getOrganizationsByOwner(user.id);
-    const ownsOrg = organizations.some((o) => o.id === organization_id);
-
-    if (!ownsOrg) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
-    const { data: project, error } = await supabase
-        .from('projects')
-        .insert({
-            name,
-            organization_id,
-            is_active: is_active ?? true,
-        })
+    const { data, error } = await supabase
+        .from('organizations')
+        .insert({ name, owner_id: user.id, is_active: true })
         .select()
         .single();
 
     if (error) {
-        console.error('[API /projects] Insert error:', error);
+        console.error('[ORG_CREATE_ERROR]', error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ project }, { status: 201 });
+    return NextResponse.json({ organization: data }, { status: 201 });
 }
