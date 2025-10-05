@@ -200,7 +200,3 @@ vercel
 ```
 
 ---
-
-## 📄 Lisans
-
-Bu proje kurum içi kullanım için geliştirilmiştir. Dağıtım sadece yetkili kişilerce yapılabilir.

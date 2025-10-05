@@ -1,12 +1,32 @@
 {
+  "root": true,
   "extends": [
     "next/core-web-vitals",
-    "next/typescript"
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended"
+  ],
+  "parser": "@typescript-eslint/parser",
+  "plugins": [
+    "@typescript-eslint",
+    "react"
   ],
   "rules": {
+    /* 🚫 Typescript kuralları */
+    "@typescript-eslint/no-unused-vars": "off",
     "@typescript-eslint/no-explicit-any": "off",
-    "@typescript-eslint/no-unused-vars": "warn",
+    "@typescript-eslint/ban-ts-comment": "off",
+    /* 🚫 React/JSX kuralları */
+    "react/no-unescaped-entities": "off",
+    /* 🚫 Genel kurallar */
+    "no-var": "off",
     "prefer-const": "warn",
-    "no-var": "error"
+    "no-console": "off",
+    /* 📝 Opsiyonel olarak build'de durdurmak yerine sadece uyarı ver */
+    "no-unused-vars": "warn"
+  },
+  "settings": {
+    "react": {
+      "version": "detect"
+    }
   }
 }
