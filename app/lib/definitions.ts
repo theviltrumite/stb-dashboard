@@ -19,10 +19,15 @@ export type Project = {
 
 export type OrganizationUsage = {
   organization_id: string;
-  period_start_at: string; // timestamp with time zone
+  period_start_at: string;
   period_end_at: string;
   request_count: number;
+  api_calls: number;
+  data_stored_mb: number;
+  created_at: string;
 };
+
+
 
 // Joined version for dashboard overview
 export type OrganizationOverview = {

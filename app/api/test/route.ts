@@ -1,81 +1,41 @@
+// app/api/test/route.ts
 import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/app/lib/supabase';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
+import { getOrganizationsByOwner, incrementOrganizationUsage } from '@/app/lib/data';
 
-export async function POST(req: Request) {
+export async function POST() {
+    const cookieStore = cookies();
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+
+    // ✅ 1. Auth kontrolü
+    const {
+        data: { user },
+        error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // ✅ 2. Kullanıcının organizasyonunu bul
+    const organizations = await getOrganizationsByOwner(user.id);
+    const org = organizations[0];
+
+    if (!org) {
+        return NextResponse.redirect('/forbidden'); // özel forbidden sayfasına yönlendiriyoruz
+    }
+
     try {
-        // Authorization header'dan Bearer token al
-        const authHeader = req.headers.get('authorization');
-        if (!authHeader?.startsWith('Bearer ')) {
-            return NextResponse.json({ error: 'Missing Bearer token' }, { status: 401 });
-        }
-
-        const token = authHeader.replace('Bearer ', '').trim();
-
-        // Supabase JWT doğrulaması
-        const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
-
-        if (authError || !user) {
-            return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
-        }
-
-        const userId = user.id;
-
-        // Aktif organization bul
-        const { data: orgs, error: orgError } = await supabaseAdmin
-            .from('organizations')
-            .select('id')
-            .eq('owner_id', userId)
-            .eq('is_active', true)
-            .limit(1);
-
-        if (orgError) throw orgError;
-        if (!orgs || orgs.length === 0) {
-            return NextResponse.json({ error: 'No active organization found' }, { status: 403 });
-        }
-
-        const organizationId = orgs[0].id;
-
-        // Dönem hesaplama (örnek: gün bazında)
-        const now = new Date();
-        const start = new Date(now);
-        start.setUTCHours(0, 0, 0, 0);
-        const end = new Date(start);
-        end.setUTCDate(start.getUTCDate() + 1);
-
-        // organization_usage kaydı artır
-        const { data: existing } = await supabaseAdmin
-            .from('organization_usage')
-            .select('request_count')
-            .eq('organization_id', organizationId)
-            .eq('period_start_at', start.toISOString())
-            .maybeSingle();
-
-        if (existing) {
-            await supabaseAdmin
-                .from('organization_usage')
-                .update({ request_count: existing.request_count + 1 })
-                .eq('organization_id', organizationId)
-                .eq('period_start_at', start.toISOString());
-        } else {
-            await supabaseAdmin
-                .from('organization_usage')
-                .insert({
-                    organization_id: organizationId,
-                    period_start_at: start.toISOString(),
-                    period_end_at: end.toISOString(),
-                    request_count: 1,
-                });
-        }
+        // ✅ 3. Usage kaydı ekle veya güncelle
+        await incrementOrganizationUsage(org.id, 1);
 
         return NextResponse.json({
-            message: 'Usage incremented successfully',
-            organization_id: organizationId,
+            message: 'Request count incremented successfully',
+            organization_id: org.id,
         });
-    } catch (error: any) {
-        console.error('❌ API /api/test error:', error);
-        return NextResponse.json(
-            { error: error.message ?? 'Internal server error' },
-            { status: 500 },
-        );
+    } catch (err) {
+        console.error('Error updating usage:', err);
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

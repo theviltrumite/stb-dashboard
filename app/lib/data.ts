@@ -1,6 +1,6 @@
 // app/lib/data.ts
 import { supabaseAdmin } from '@/app/lib/supabaseAdmin';
-import type { Organization, Project, OrganizationUsage } from '@/app/lib/definitions';
+import type { Organization, Project, ProjectForm, OrganizationUsage } from '@/app/lib/definitions';
 
 /* -------------------------
    Organization / projects
@@ -38,17 +38,20 @@ export async function getProjects(orgId: string): Promise<Project[]> {
   return data ?? [];
 }
 
-export async function createProject(payload: Project): Promise<Project> {
+export async function createProject(payload: ProjectForm): Promise<Project> {
   const { data, error } = await supabaseAdmin
     .from('projects')
-    .insert(payload)
+    .insert({
+      name: payload.name,
+      organization_id: payload.organization_id,
+      is_active: payload.is_active ?? true,
+    })
     .select()
     .single();
 
   if (error) throw new Error(error.message);
   return data;
 }
-
 export async function updateProject(id: string, payload: Partial<Project>): Promise<Project> {
   const { data, error } = await supabaseAdmin
     .from('projects')
@@ -84,11 +87,11 @@ export async function getOrganizationUsage(orgId: string): Promise<OrganizationU
 
 export async function incrementOrganizationUsage(orgId: string, incrementBy = 1): Promise<void> {
   const now = new Date();
-  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59));
+  const periodStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0));
+  const periodEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59, 999));
 
-  const periodStartIso = start.toISOString();
-  const periodEndIso = end.toISOString();
+  const periodStartIso = periodStart.toISOString();
+  const periodEndIso = periodEnd.toISOString();
 
   const { data: existing, error: selectError } = await supabaseAdmin
     .from('organization_usage')
@@ -105,6 +108,8 @@ export async function incrementOrganizationUsage(orgId: string, incrementBy = 1)
       period_start_at: periodStartIso,
       period_end_at: periodEndIso,
       request_count: incrementBy,
+      api_calls: incrementBy,
+      data_stored_mb: 0,
     });
     if (error) throw new Error(error.message);
     return;
@@ -114,6 +119,7 @@ export async function incrementOrganizationUsage(orgId: string, incrementBy = 1)
     .from('organization_usage')
     .update({
       request_count: (existing.request_count ?? 0) + incrementBy,
+      api_calls: (existing.api_calls ?? 0) + incrementBy,
     })
     .eq('organization_id', orgId)
     .eq('period_start_at', periodStartIso);
