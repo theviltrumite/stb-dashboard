@@ -4,11 +4,11 @@ export const metadata = {
     openGraph: {
         title: "STB Kurumsal Yönetim Paneli",
         description: "STB dijital dönüşüm platformu.",
-        url: "https://www.stbpanel.com",
+        url: "https://www.mehmeterenballi.com",
         siteName: "STB",
         images: [
             {
-                url: "https://www.stbpanel.com/og-image.png",
+                url: "./main-desktop.png",
                 width: 1200,
                 height: 630,
             },
@@ -20,6 +20,6 @@ export const metadata = {
         card: "summary_large_image",
         title: "STB Kurumsal Yönetim Paneli",
         description: "STB dijital dönüşüm platformu.",
-        images: ["https://www.stbpanel.com/og-image.png"],
+        images: ["./main-desktop.png"],
     },
 };
