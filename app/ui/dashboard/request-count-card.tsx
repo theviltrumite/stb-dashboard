@@ -9,7 +9,7 @@ export default function RequestCountCard() {
   const [count, setCount] = useState<number>(0);
   const supabase = createClientComponentClient();
 
-  // İlk değeri DB'den çek
+  // 🔸 İlk değeri çek
   useEffect(() => {
     if (!organization) return;
 
@@ -17,7 +17,7 @@ export default function RequestCountCard() {
       const { data, error } = await supabase
         .from('organization_usage')
         .select('request_count')
-        .eq('organization_id', organization?.id)
+        .eq('organization_id', organization.id)
         .order('period_start_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -30,45 +30,26 @@ export default function RequestCountCard() {
     fetchUsage();
   }, [organization, supabase]);
 
-  // Realtime subscription
+  // 🔸 Realtime abonelik (INSERT + UPDATE)
   useEffect(() => {
     if (!organization) return;
 
     const channel = supabase
-      .channel('realtime:usage')
+      .channel('org-usage-changes')
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: '*', // 👈 hem INSERT hem UPDATE
           schema: 'public',
           table: 'organization_usage',
           filter: `organization_id=eq.${organization.id}`,
         },
         (payload) => {
-          type UsagePayload = {
-            organization_id: string;
-            period_start_at: string;
-            request_count: number;
-          };
-
-          supabase
-            .channel('org-usage')
-            .on(
-              'postgres_changes',
-              {
-                event: 'UPDATE',
-                schema: 'public',
-                table: 'organization_usage',
-                filter: `organization_id=eq.${organization.id}`,
-              },
-              (payload) => {
-                const data = payload.new as UsagePayload;  // ✅ Type cast
-                if (data?.request_count !== undefined) {
-                  setCount(data.request_count);
-                }
-              }
-            )
-            .subscribe();
+          console.log('[Realtime payload]', payload);
+          const newCount = (payload.new as any).request_count;
+          if (typeof newCount === 'number') {
+            setCount(newCount);
+          }
         }
       )
       .subscribe();

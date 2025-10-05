@@ -8,7 +8,7 @@ export default function NoOrganizationPage() {
     const [name, setName] = useState('');
     const [loading, setLoading] = useState(false);
     const router = useRouter();
-    const { refreshOrganization } = useAuth(); // ✅
+    const { refreshOrganization } = useAuth();
 
     async function handleCreate(e: React.FormEvent) {
         e.preventDefault();
@@ -21,8 +21,12 @@ export default function NoOrganizationPage() {
         setLoading(false);
 
         if (res.ok) {
-            await refreshOrganization();   // ✅ Context state'i yenile
-            router.push('/dashboard');     // ✅ Sonra yönlendir
+            await refreshOrganization();
+            if (res.ok) {
+                await refreshOrganization();
+                router.push('/dashboard');
+            }
+
         } else {
             const { error } = await res.json();
             alert(`Error: ${error}`);
