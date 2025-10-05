@@ -9,6 +9,7 @@ type Project = {
     name: string;
     is_active: boolean;
     created_at: string;
+    organization_id: string;
 };
 
 export default function ProjectList() {
@@ -16,26 +17,24 @@ export default function ProjectList() {
     const supabase = createClientComponentClient();
     const [projects, setProjects] = useState<Project[]>([]);
 
-    // 📌 İlk veri çekimi
+    // 🟡 1️⃣ İlk veri çekimi
     useEffect(() => {
         if (!organization) return;
 
-        async function fetchProjects() {
+        const fetchProjects = async () => {
             const { data, error } = await supabase
                 .from('projects')
                 .select('*')
                 .eq('organization_id', organization.id)
                 .order('created_at', { ascending: false });
 
-            if (!error && data) {
-                setProjects(data);
-            }
-        }
+            if (!error && data) setProjects(data);
+        };
 
         fetchProjects();
     }, [organization, supabase]);
 
-    // 🔥 Realtime abonelik (INSERT, DELETE, UPDATE)
+    // 🟠 2️⃣ Realtime senkronizasyon
     useEffect(() => {
         if (!organization) return;
 
@@ -65,7 +64,9 @@ export default function ProjectList() {
                     if (payload.eventType === 'UPDATE') {
                         setProjects((prev) =>
                             prev.map((p) =>
-                                p.id === (payload.new as Project).id ? (payload.new as Project) : p
+                                p.id === (payload.new as Project).id
+                                    ? (payload.new as Project)
+                                    : p
                             )
                         );
                     }
@@ -78,8 +79,11 @@ export default function ProjectList() {
         };
     }, [organization, supabase]);
 
-    // 🧰 Proje silme
+    // 🧰 3️⃣ Proje silme (Optimistic UI)
     const handleDelete = async (id: string) => {
+        // 👌 Önce UI'dan kaldır
+        setProjects((prev) => prev.filter((p) => p.id !== id));
+
         const res = await fetch(`/api/projects/${id}`, { method: 'DELETE' });
         if (!res.ok) {
             const { error } = await res.json();
@@ -87,8 +91,15 @@ export default function ProjectList() {
         }
     };
 
-    // 🔄 Aktiflik durumunu değiştirme
+    // 🔄 4️⃣ Aktiflik durumunu değiştirme (Optimistic UI)
     const handleToggleActive = async (project: Project) => {
+        // 👌 Önce UI'da güncelle
+        setProjects((prev) =>
+            prev.map((p) =>
+                p.id === project.id ? { ...p, is_active: !p.is_active } : p
+            )
+        );
+
         const res = await fetch(`/api/projects/${project.id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
@@ -101,9 +112,11 @@ export default function ProjectList() {
         }
     };
 
+    // 🖼️ 5️⃣ Render
     return (
         <div className="mt-6">
             <h2 className="text-lg font-semibold mb-3">Projeler</h2>
+
             {projects.length === 0 ? (
                 <p className="text-gray-500">Henüz proje yok.</p>
             ) : (
@@ -122,6 +135,7 @@ export default function ProjectList() {
                                     {project.is_active ? 'Aktif' : 'Pasif'}
                                 </p>
                             </div>
+
                             <div className="flex space-x-2">
                                 <button
                                     onClick={() => handleToggleActive(project)}

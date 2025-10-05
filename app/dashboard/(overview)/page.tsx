@@ -13,7 +13,6 @@ export default function DashboardPage() {
                 <TestButton />
             </div>
 
-            {/* ✅ Proje listesi */}
             <ProjectList />
         </div>
     );
