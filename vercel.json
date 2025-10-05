@@ -1,0 +1,11 @@
+{
+    "version": 1,
+    "buildCommand": "pnpm run build",
+    "devCommand": "pnpm dev",
+    "installCommand": "pnpm install",
+    "outputDirectory": ".next",
+    "framework": "nextjs",
+    "env": {
+        "NEXT_DISABLE_ESLINT": "1"
+    }
+}
