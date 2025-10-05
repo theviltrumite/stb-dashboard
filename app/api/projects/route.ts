@@ -31,11 +31,7 @@ export async function POST(req: Request) {
     }
 
     try {
-        const project = await createProject({
-            name,
-            organization_id,
-            is_active,
-        });
+        const project = await createProject({ name, organization_id, is_active });
         return NextResponse.json({ project }, { status: 201 });
     } catch (err) {
         console.error('Error creating project:', err);

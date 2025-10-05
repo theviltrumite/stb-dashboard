@@ -1,12 +1,13 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import type { AuthUser, Organization } from '@/app/lib/definitions';
-import { getOrganizationsByOwner } from '@/app/lib/data';
+import type { User } from '@supabase/supabase-js';
+import type { Organization } from '@/app/lib/definitions';
 
 type AuthContextType = {
-    user: AuthUser | null;
+    user: User | null;
     organization: Organization | null;
     loading: boolean;
 };
@@ -17,42 +18,59 @@ const AuthContext = createContext<AuthContextType>({
     loading: true,
 });
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const supabase = createClientComponentClient();
-    const [user, setUser] = useState<AuthUser | null>(null);
+    const [user, setUser] = useState<User | null>(null);
     const [organization, setOrganization] = useState<Organization | null>(null);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        async function load() {
-            const { data } = await supabase.auth.getUser();
-            if (data.user) {
-                const authUser: AuthUser = {
-                    id: data.user.id,
-                    email: data.user.email!,
-                };
-                setUser(authUser);
+    const router = useRouter();
+    const pathname = usePathname();
 
-                // Organization çek
-                const orgs = await getOrganizationsByOwner(authUser.id);
-                setOrganization(orgs[0] ?? null);
-            } else {
-                setUser(null);
-                setOrganization(null);
-            }
+    useEffect(() => {
+        async function loadUser() {
+            const { data } = await supabase.auth.getUser();
+            setUser(data.user ?? null);
             setLoading(false);
         }
 
-        load();
-    }, [supabase]);
+        loadUser();
+
+        const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+            setUser(session?.user ?? null);
+            setLoading(false);
+            if (session?.user && pathname.startsWith('/(auth)')) {
+                router.push('/dashboard');
+            }
+        });
+
+        return () => {
+            listener.subscription.unsubscribe();
+        };
+    }, [pathname, router, supabase]);
+
+    // Org bilgisini user değişince çek
+    useEffect(() => {
+        if (!user) {
+            setOrganization(null);
+            return;
+        }
+        async function fetchOrg() {
+            const { data, error } = await supabase
+                .from('organizations')
+                .select('*')
+                .eq('owner_id', user?.id)
+                .maybeSingle();
+            if (!error) setOrganization(data);
+        }
+        fetchOrg();
+    }, [user, supabase]);
 
     return (
         <AuthContext.Provider value={{ user, organization, loading }}>
             {children}
         </AuthContext.Provider>
     );
-}
+};
 
-export function useAuth() {
-    return useContext(AuthContext);
-}
+export const useAuth = () => useContext(AuthContext);

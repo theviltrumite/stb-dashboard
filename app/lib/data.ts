@@ -1,5 +1,5 @@
 // app/lib/data.ts
-import { supabaseAdmin } from '@/app/lib/supabaseAdmin';
+import { getSupabaseAdmin } from '@/app/lib/supabaseAdmin';
 import type { Organization, Project, ProjectForm, OrganizationUsage } from '@/app/lib/definitions';
 
 /* -------------------------
@@ -7,7 +7,8 @@ import type { Organization, Project, ProjectForm, OrganizationUsage } from '@/ap
    ------------------------- */
 
 export async function getOrganizationsByOwner(ownerId: string): Promise<Organization[]> {
-  const { data, error } = await supabaseAdmin
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
     .from('organizations')
     .select('*')
     .eq('owner_id', ownerId)
@@ -18,7 +19,8 @@ export async function getOrganizationsByOwner(ownerId: string): Promise<Organiza
 }
 
 export async function getOrganizationById(orgId: string): Promise<Organization | null> {
-  const { data, error } = await supabaseAdmin
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
     .from('organizations')
     .select('*')
     .eq('id', orgId)
@@ -29,7 +31,8 @@ export async function getOrganizationById(orgId: string): Promise<Organization |
 }
 
 export async function getProjects(orgId: string): Promise<Project[]> {
-  const { data, error } = await supabaseAdmin
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
     .from('projects')
     .select('*')
     .eq('organization_id', orgId);
@@ -39,7 +42,8 @@ export async function getProjects(orgId: string): Promise<Project[]> {
 }
 
 export async function createProject(payload: ProjectForm): Promise<Project> {
-  const { data, error } = await supabaseAdmin
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
     .from('projects')
     .insert({
       name: payload.name,
@@ -52,8 +56,10 @@ export async function createProject(payload: ProjectForm): Promise<Project> {
   if (error) throw new Error(error.message);
   return data;
 }
+
 export async function updateProject(id: string, payload: Partial<Project>): Promise<Project> {
-  const { data, error } = await supabaseAdmin
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
     .from('projects')
     .update(payload)
     .eq('id', id)
@@ -65,7 +71,8 @@ export async function updateProject(id: string, payload: Partial<Project>): Prom
 }
 
 export async function deleteProject(id: string): Promise<void> {
-  const { error } = await supabaseAdmin.from('projects').delete().eq('id', id);
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase.from('projects').delete().eq('id', id);
   if (error) throw new Error(error.message);
 }
 
@@ -74,7 +81,8 @@ export async function deleteProject(id: string): Promise<void> {
    ------------------------- */
 
 export async function getOrganizationUsage(orgId: string): Promise<OrganizationUsage[]> {
-  const { data, error } = await supabaseAdmin
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
     .from('organization_usage')
     .select('*')
     .eq('organization_id', orgId)
@@ -93,7 +101,8 @@ export async function incrementOrganizationUsage(orgId: string, incrementBy = 1)
   const periodStartIso = periodStart.toISOString();
   const periodEndIso = periodEnd.toISOString();
 
-  const { data: existing, error: selectError } = await supabaseAdmin
+  const supabase = getSupabaseAdmin();
+  const { data: existing, error: selectError } = await supabase
     .from('organization_usage')
     .select('*')
     .eq('organization_id', orgId)
@@ -103,7 +112,8 @@ export async function incrementOrganizationUsage(orgId: string, incrementBy = 1)
   if (selectError) throw new Error(selectError.message);
 
   if (!existing) {
-    const { error } = await supabaseAdmin.from('organization_usage').insert({
+    const supabase = getSupabaseAdmin();
+    const { error } = await supabase.from('organization_usage').insert({
       organization_id: orgId,
       period_start_at: periodStartIso,
       period_end_at: periodEndIso,
@@ -115,7 +125,7 @@ export async function incrementOrganizationUsage(orgId: string, incrementBy = 1)
     return;
   }
 
-  const { error: updateError } = await supabaseAdmin
+  const { error: updateError } = await supabase
     .from('organization_usage')
     .update({
       request_count: (existing.request_count ?? 0) + incrementBy,

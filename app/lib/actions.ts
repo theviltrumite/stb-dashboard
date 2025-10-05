@@ -4,7 +4,6 @@
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { supabaseAdmin } from '@/app/lib/supabaseAdmin';
 import { createProject as createProjectRecord, updateProject as updateProjectRecord, deleteProject as deleteProjectRecord } from './data';
 import type { ProjectForm } from './definitions';
 
@@ -36,7 +35,7 @@ export async function createProjectAction(formData: FormData | Record<string, an
     }
 
     try {
-        await createProjectRecord(parsed.data as ProjectForm);
+        await createProjectRecord(parsed.data);
     } catch (err) {
         return { message: `Database error: ${(err as Error).message}` };
     }
