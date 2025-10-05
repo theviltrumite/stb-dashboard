@@ -70,11 +70,14 @@ export default function ProjectList() {
 
     const handleDelete = async (id: string) => {
         const res = await fetch(`/api/projects/${id}`, { method: 'DELETE' });
-        if (!res.ok) {
+        if (res.ok) {
+            setProjects((prev) => prev.filter((p) => p.id !== id));
+        } else {
             const { error } = await res.json();
             setError(`Silme hatası: ${error}`);
         }
     };
+
 
     const [togglingId, setTogglingId] = useState<string | null>(null);
 

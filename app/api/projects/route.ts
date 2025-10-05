@@ -1,35 +1,47 @@
+// app/api/projects/route.ts
 import { NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import { getOrganizationsByOwner } from '@/app/lib/data';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 
 export async function POST(req: Request) {
-    const cookieStore = cookies(); // ✅ await kaldırıldı
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+    try {
+        const supabase = createRouteHandlerClient({ cookies });
 
-    const {
-        data: { user },
-    } = await supabase.auth.getUser();
+        const {
+            data: { user },
+        } = await supabase.auth.getUser();
 
-    if (!user) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        if (!user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const { name, organization_id, is_active } = await req.json();
+
+        if (!name || !organization_id) {
+            return NextResponse.json(
+                { error: 'Eksik bilgi: name ve organization_id gerekli.' },
+                { status: 400 }
+            );
+        }
+
+        const { data, error } = await supabase
+            .from('projects')
+            .insert({
+                name,
+                organization_id,
+                is_active,
+            })
+            .select()
+            .single();
+
+        if (error) {
+            console.error('[PROJECT_CREATE_ERROR]', error);
+            return NextResponse.json({ error: error.message }, { status: 500 });
+        }
+
+        return NextResponse.json({ project: data }, { status: 201 });
+    } catch (err) {
+        console.error('[PROJECT_CREATE_UNEXPECTED]', err);
+        return NextResponse.json({ error: 'Sunucu hatası oluştu.' }, { status: 500 });
     }
-
-    const { name } = await req.json();
-    if (!name) {
-        return NextResponse.json({ error: 'Name is required' }, { status: 400 });
-    }
-
-    const { data, error } = await supabase
-        .from('organizations')
-        .insert({ name, owner_id: user.id, is_active: true })
-        .select()
-        .single();
-
-    if (error) {
-        console.error('[ORG_CREATE_ERROR]', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ organization: data }, { status: 201 });
 }

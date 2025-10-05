@@ -17,7 +17,7 @@ export default function RequestCountCard() {
       const { data, error } = await supabase
         .from('organization_usage')
         .select('request_count')
-        .eq('organization_id', organization.id)
+        .eq('organization_id', organization!.id)
         .order('period_start_at', { ascending: false })
         .limit(1)
         .maybeSingle();

@@ -24,6 +24,7 @@ export default function CreateProjectForm() {
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         if (!organization) {
+            // Organizasyonu yoksa no-org’e yönlendirelim
             router.push('/dashboard/no-org');
             return;
         }

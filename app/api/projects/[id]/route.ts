@@ -10,7 +10,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
 
     const body = await req.json();
 
-    const cookieStore = await cookies();
+    const cookieStore = cookies();
     const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
 
     const { error } = await supabase
@@ -32,7 +32,7 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
         return NextResponse.json({ error: 'Missing project ID' }, { status: 400 });
     }
 
-    const cookieStore = await cookies();
+    const cookieStore = cookies();
     const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
 
     const { error } = await supabase.from('projects').delete().eq('id', id);
