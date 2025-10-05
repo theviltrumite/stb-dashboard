@@ -29,7 +29,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const router = useRouter();
     const pathname = usePathname();
 
-    // 1️⃣ Kullanıcı session kontrolü (ilk yükleme)
+    // Kullanıcı session kontrolü (ilk yükleme)
     useEffect(() => {
         let mounted = true;
 
@@ -54,7 +54,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         };
     }, [supabase]);
 
-    // 2️⃣ Organizasyon bilgisini çek
+    // Organizasyon bilgisini çek
     const refreshOrganization = async () => {
         if (!user) {
             setOrganization(null);
@@ -79,7 +79,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
     }, [user]);
 
-    // 3️⃣ Login olmuş kullanıcı login sayfasına giderse → dashboard’a at
+    // Login olmuş kullanıcı login sayfasına giderse → dashboard’a at
     useEffect(() => {
         if (loading) return;
         if (user && pathname.startsWith('/(auth)')) {
@@ -87,7 +87,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
     }, [user, loading, pathname, router]);
 
-    // 4️⃣ Login olmamış kullanıcı dashboard'a giderse → login’e at
+    // Login olmamış kullanıcı dashboard'a giderse → login’e at
     useEffect(() => {
         if (loading) return;
         if (!user && pathname.startsWith('/dashboard')) {

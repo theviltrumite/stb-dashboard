@@ -1,13 +1,24 @@
-import { GlobeAltIcon } from '@heroicons/react/24/outline';
-import { lusitana } from '@/app/ui/fonts';
+"use client";
+
+import Image from "next/image";
+import { motion } from "framer-motion";
 
 export default function STBLogo() {
   return (
-    <div
-      className={`${lusitana.className} flex flex-row items-center leading-none text-white`}
+    <motion.div
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.8, ease: "easeOut" }}
+      className="flex items-center"
     >
-      <GlobeAltIcon className="h-12 w-12 rotate-[15deg]" />
-      <p className="text-[44px]">STB</p>
-    </div>
+      <Image
+        src="/stb-logo.png"
+        alt="STB Logo"
+        width={160}
+        height={160}
+        priority
+        className="object-contain"
+      />
+    </motion.div>
   );
 }

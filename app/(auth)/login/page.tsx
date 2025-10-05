@@ -3,6 +3,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Field, FieldGroup, FieldLabel, FieldSeparator, FieldDescription } from '@/components/ui/field';
+import { motion } from 'framer-motion';
+import Link from 'next/link';
 
 export default function LoginPage() {
     const supabase = createClientComponentClient();
@@ -10,10 +16,13 @@ export default function LoginPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
+    const [loading, setLoading] = useState(false);
 
     async function handleLogin(e: React.FormEvent) {
         e.preventDefault();
+        setLoading(true);
         const { error } = await supabase.auth.signInWithPassword({ email, password });
+        setLoading(false);
         if (error) {
             setError(error.message);
         } else {
@@ -22,28 +31,71 @@ export default function LoginPage() {
     }
 
     return (
-        <main className="flex min-h-screen flex-col items-center justify-center">
-            <form onSubmit={handleLogin} className="bg-white p-6 rounded shadow-md w-80">
-                <h1 className="text-xl font-bold mb-4">Login</h1>
-                <input
-                    type="email"
-                    placeholder="Email"
-                    className="border p-2 w-full mb-2"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                />
-                <input
-                    type="password"
-                    placeholder="Password"
-                    className="border p-2 w-full mb-2"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                />
-                {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
-                <button type="submit" className="bg-blue-500 text-white w-full py-2 rounded">
-                    Login
-                </button>
-            </form>
-        </main>
+        <div className="bg-muted flex min-h-svh flex-col items-center justify-center p-6 md:p-10">
+            <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ duration: 0.5 }}
+                className="w-full max-w-sm flex flex-col gap-6"
+            >
+                <Card>
+                    <CardHeader className="text-center">
+                        <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
+                        <CardDescription>Login to continue to your dashboard</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <form onSubmit={handleLogin}>
+                            <FieldGroup>
+                                <Field>
+                                    <FieldLabel htmlFor="email">Email</FieldLabel>
+                                    <Input
+                                        id="email"
+                                        type="email"
+                                        placeholder="m@example.com"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        required
+                                    />
+                                </Field>
+                                <Field>
+                                    <div className="flex items-center justify-between">
+                                        <FieldLabel htmlFor="password">Password</FieldLabel>
+                                        <Link
+                                            href="#"
+                                            className="text-sm underline-offset-4 hover:underline"
+                                        >
+                                            Forgot password?
+                                        </Link>
+                                    </div>
+                                    <Input
+                                        id="password"
+                                        type="password"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        required
+                                    />
+                                </Field>
+
+                                {error && (
+                                    <FieldDescription className="text-red-600 text-sm">{error}</FieldDescription>
+                                )}
+
+                                <Field>
+                                    <Button type="submit" className="w-full" disabled={loading}>
+                                        {loading ? 'Logging in...' : 'Login'}
+                                    </Button>
+                                    <FieldDescription className="text-center mt-2">
+                                        Don&apos;t have an account?{' '}
+                                        <Link href="/register" className="underline underline-offset-4">
+                                            Sign up
+                                        </Link>
+                                    </FieldDescription>
+                                </Field>
+                            </FieldGroup>
+                        </form>
+                    </CardContent>
+                </Card>
+            </motion.div>
+        </div>
     );
 }

@@ -1,40 +1,42 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useAuth } from '@/app/context/AuthContext';
+import { Project } from '@/app/lib/definitions';
+import { paginate, searchFilter } from '@/app/lib/utils';
+import ProjectsPagination from './projects-pagination';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
-type Project = {
-    id: string;
-    name: string;
-    is_active: boolean;
-    created_at: string;
-    organization_id: string;
-};
+const PAGE_SIZE = 6;
 
 export default function ProjectList() {
     const { organization } = useAuth();
     const supabase = createClientComponentClient();
-    const [projects, setProjects] = useState<Project[]>([]);
 
-    // 🟡 1️⃣ İlk veri çekimi
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [error, setError] = useState<string | null>(null);
+
     useEffect(() => {
         if (!organization) return;
-
         const fetchProjects = async () => {
             const { data, error } = await supabase
                 .from('projects')
                 .select('*')
                 .eq('organization_id', organization.id)
                 .order('created_at', { ascending: false });
-
             if (!error && data) setProjects(data);
+            else setError('Projeler yüklenirken hata oluştu.');
         };
-
         fetchProjects();
     }, [organization, supabase]);
 
-    // 🟠 2️⃣ Realtime senkronizasyon
+    // 🔥 Realtime sync
     useEffect(() => {
         if (!organization) return;
 
@@ -42,32 +44,15 @@ export default function ProjectList() {
             .channel('projects-realtime')
             .on(
                 'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'projects',
-                    filter: `organization_id=eq.${organization.id}`,
-                },
+                { event: '*', schema: 'public', table: 'projects', filter: `organization_id=eq.${organization.id}` },
                 (payload) => {
-                    console.log('[Realtime Projects]', payload);
-
                     if (payload.eventType === 'INSERT') {
                         setProjects((prev) => [payload.new as Project, ...prev]);
-                    }
-
-                    if (payload.eventType === 'DELETE') {
+                    } else if (payload.eventType === 'DELETE') {
+                        setProjects((prev) => prev.filter((p) => p.id !== (payload.old as Project).id));
+                    } else if (payload.eventType === 'UPDATE') {
                         setProjects((prev) =>
-                            prev.filter((p) => p.id !== (payload.old as Project).id)
-                        );
-                    }
-
-                    if (payload.eventType === 'UPDATE') {
-                        setProjects((prev) =>
-                            prev.map((p) =>
-                                p.id === (payload.new as Project).id
-                                    ? (payload.new as Project)
-                                    : p
-                            )
+                            prev.map((p) => (p.id === (payload.new as Project).id ? (payload.new as Project) : p))
                         );
                     }
                 }
@@ -79,26 +64,22 @@ export default function ProjectList() {
         };
     }, [organization, supabase]);
 
-    // 🧰 3️⃣ Proje silme (Optimistic UI)
-    const handleDelete = async (id: string) => {
-        // 👌 Önce UI'dan kaldır
-        setProjects((prev) => prev.filter((p) => p.id !== id));
+    const filtered = useMemo(() => searchFilter(projects, searchTerm), [projects, searchTerm]);
+    const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+    const paginated = useMemo(() => paginate(filtered, currentPage, PAGE_SIZE), [filtered, currentPage]);
 
+    const handleDelete = async (id: string) => {
         const res = await fetch(`/api/projects/${id}`, { method: 'DELETE' });
         if (!res.ok) {
             const { error } = await res.json();
-            alert(`Silme hatası: ${error}`);
+            setError(`Silme hatası: ${error}`);
         }
     };
 
-    // 🔄 4️⃣ Aktiflik durumunu değiştirme (Optimistic UI)
+    const [togglingId, setTogglingId] = useState<string | null>(null);
+
     const handleToggleActive = async (project: Project) => {
-        // 👌 Önce UI'da güncelle
-        setProjects((prev) =>
-            prev.map((p) =>
-                p.id === project.id ? { ...p, is_active: !p.is_active } : p
-            )
-        );
+        setTogglingId(project.id);
 
         const res = await fetch(`/api/projects/${project.id}`, {
             method: 'PATCH',
@@ -108,51 +89,94 @@ export default function ProjectList() {
 
         if (!res.ok) {
             const { error } = await res.json();
-            alert(`Güncelleme hatası: ${error}`);
+            setError(`Güncelleme hatası: ${error}`);
         }
+
+        setTogglingId(null);
     };
 
-    // 🖼️ 5️⃣ Render
-    return (
-        <div className="mt-6">
-            <h2 className="text-lg font-semibold mb-3">Projeler</h2>
 
-            {projects.length === 0 ? (
-                <p className="text-gray-500">Henüz proje yok.</p>
-            ) : (
-                <ul className="space-y-2">
-                    {projects.map((project) => (
-                        <li
+    return (
+        <div className="mt-8">
+            {organization && (
+                <h1 className="text-2xl font-bold mb-4 text-gray-800">
+                    {organization.name} — Projects
+                </h1>
+            )}
+
+            {error && (
+                <Alert variant="destructive" className="mb-4">
+                    <AlertTitle>Hata</AlertTitle>
+                    <AlertDescription>{error}</AlertDescription>
+                </Alert>
+            )}
+
+            <div className="mb-4">
+                <Input
+                    placeholder="Proje ara..."
+                    value={searchTerm}
+                    onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        setCurrentPage(1);
+                    }}
+                    className="max-w-xs"
+                />
+            </div>
+
+            <AnimatePresence>
+                {paginated.length === 0 ? (
+                    <motion.p
+                        key="no-projects"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="text-gray-500"
+                    >
+                        Hiç proje yok.
+                    </motion.p>
+                ) : (
+                    paginated.map((project) => (
+                        <motion.div
                             key={project.id}
-                            className="border rounded p-3 flex justify-between items-center"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="border rounded p-3 mb-2 flex justify-between items-center bg-white shadow-sm hover:shadow-md transition"
                         >
                             <div>
-                                <p className="font-medium">{project.name}</p>
-                                <p
-                                    className={`text-sm font-medium ${project.is_active ? 'text-green-600' : 'text-gray-500'
-                                        }`}
-                                >
+                                <p className="font-medium text-gray-800">{project.name}</p>
+                                <p className="text-xs text-gray-500">
+                                    {new Date(project.created_at).toLocaleString()}
+                                </p>
+                                {project.description && (
+                                    <p className="text-sm text-gray-600">{project.description}</p>
+                                )}
+                                <p className={`text-sm font-medium ${project.is_active ? 'text-green-600' : 'text-gray-500'}`}>
                                     {project.is_active ? 'Aktif' : 'Pasif'}
                                 </p>
                             </div>
-
                             <div className="flex space-x-2">
-                                <button
-                                    onClick={() => handleToggleActive(project)}
-                                    className="text-xs bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600"
-                                >
+                                {/* <Button variant="secondary" size="sm" onClick={() => handleToggleActive(project)}>
                                     Toggle Active
-                                </button>
-                                <button
-                                    onClick={() => handleDelete(project.id)}
-                                    className="text-xs bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
-                                >
+                                </Button> */}
+                                <Button size="sm" onClick={() => handleToggleActive(project)} className="px-4 py-2 rounded-md border border-black bg-white text-black hover:text-white text-sm hover:shadow-[4px_4px_0px_0px_rgba(0,0,0)] transition duration-200">
+                                    Toggle Active
+                                </Button>
+                                <Button variant="destructive" size="sm" onClick={() => handleDelete(project.id)}>
                                     Delete
-                                </button>
+                                </Button>
                             </div>
-                        </li>
-                    ))}
-                </ul>
+                        </motion.div>
+                    ))
+                )}
+            </AnimatePresence>
+
+            {totalPages > 1 && (
+                <ProjectsPagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                />
             )}
         </div>
     );

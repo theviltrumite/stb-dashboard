@@ -7,7 +7,6 @@ export async function POST(req: Request) {
     const cookieStore = await cookies();
     const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
 
-    // 🧍‍♂️ Kullanıcıyı al
     const {
         data: { user },
     } = await supabase.auth.getUser();
@@ -16,7 +15,6 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // 📝 Request body
     const body = await req.json();
     const { name, organization_id, is_active } = body;
 
@@ -24,7 +22,6 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
     }
 
-    // 👑 Organizasyon sahipliği doğrula
     const organizations = await getOrganizationsByOwner(user.id);
     const ownsOrg = organizations.some((o) => o.id === organization_id);
 
@@ -32,7 +29,6 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // 🏗️ Supabase Auth client ile INSERT yap
     const { data: project, error } = await supabase
         .from('projects')
         .insert({

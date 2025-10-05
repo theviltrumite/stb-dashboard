@@ -3,7 +3,7 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 
 export async function PATCH(req: Request, context: { params: Promise<{ id: string }> }) {
-    const { id } = await context.params; // ✅ Promise unwrap
+    const { id } = await context.params;
     if (!id) {
         return NextResponse.json({ error: 'Missing project ID' }, { status: 400 });
     }
@@ -27,7 +27,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
 }
 
 export async function DELETE(_req: Request, context: { params: Promise<{ id: string }> }) {
-    const { id } = await context.params; // ✅ Promise unwrap
+    const { id } = await context.params;
     if (!id) {
         return NextResponse.json({ error: 'Missing project ID' }, { status: 400 });
     }

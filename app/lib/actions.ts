@@ -7,21 +7,13 @@ import { redirect } from 'next/navigation';
 import { createProject as createProjectRecord, updateProject as updateProjectRecord, deleteProject as deleteProjectRecord } from './data';
 import type { ProjectForm } from './definitions';
 
-/**
- * Zod schema for project create/update
- */
 const ProjectSchema = z.object({
     name: z.string().min(2, 'Project name must be at least 2 characters.'),
     organization_id: z.string().uuid(),
     is_active: z.boolean().optional(),
 });
 
-/**
- * Create a project (server action).
- * Expects formData from a Next.js form action or direct payload.
- */
 export async function createProjectAction(formData: FormData | Record<string, any>) {
-    // normalize
     const raw = formData instanceof FormData ? Object.fromEntries(formData.entries()) : formData;
 
     const parsed = ProjectSchema.safeParse({
@@ -40,14 +32,10 @@ export async function createProjectAction(formData: FormData | Record<string, an
         return { message: `Database error: ${(err as Error).message}` };
     }
 
-    // revalidate and redirect to organization's dashboard overview (adjust path as you use)
     revalidatePath('/dashboard');
     redirect('/dashboard');
 }
 
-/**
- * Update project action
- */
 export async function updateProjectAction(id: string, formData: FormData | Record<string, any>) {
     const raw = formData instanceof FormData ? Object.fromEntries(formData.entries()) : formData;
 
@@ -71,9 +59,6 @@ export async function updateProjectAction(id: string, formData: FormData | Recor
     redirect('/dashboard');
 }
 
-/**
- * Delete project action
- */
 export async function deleteProjectAction(id: string) {
     try {
         await deleteProjectRecord(id);
@@ -84,10 +69,6 @@ export async function deleteProjectAction(id: string) {
     redirect('/dashboard');
 }
 
-/**
- * Track usage (increment) — convenience server action for UI to call.
- * You might also call incrementOrganizationUsage directly from an API route that validates the user's access token.
- */
 import { incrementOrganizationUsage } from './data';
 
 export async function trackUsageAction(organizationId: string, increment = 1) {

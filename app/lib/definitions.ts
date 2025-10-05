@@ -12,9 +12,10 @@ export type Organization = {
 export type Project = {
   id: string;
   name: string;
-  organization_id: string;
-  created_at: string;
+  description?: string;
   is_active: boolean;
+  created_at: string;
+  organization_id: string;
 };
 
 export type OrganizationUsage = {
@@ -26,7 +27,6 @@ export type OrganizationUsage = {
   data_stored_mb: number;
   created_at: string;
 };
-
 
 
 // Joined version for dashboard overview

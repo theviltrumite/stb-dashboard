@@ -4,7 +4,7 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 
 export async function POST() {
-    const cookieStore = await cookies(); // ✅ await ekledik
+    const cookieStore = await cookies();
     const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
 
     console.log('[API /test] Cookies', JSON.stringify(cookieStore.getAll(), null, 2));
@@ -17,12 +17,11 @@ export async function POST() {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // ✅ Organizasyonu DB'den tekrar çek
     const { data: org, error: orgError } = await supabase
         .from('organizations')
         .select('id, owner_id, is_active')
         .eq('owner_id', user.id)
-        .order('created_at', { ascending: true })  // en eskiyi al
+        .order('created_at', { ascending: true })
         .limit(1)
         .maybeSingle();
 
@@ -38,14 +37,12 @@ export async function POST() {
     console.log('[API /test] User:', user);
     console.log('[API /test] Org:', org);
 
-    // ✅ organization_usage tablosunu güncelle
     const now = new Date();
     const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
     const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59));
     const periodStartIso = start.toISOString();
     const periodEndIso = end.toISOString();
 
-    // Var mı kontrol et
     const { data: existing } = await supabase
         .from('organization_usage')
         .select('*')
@@ -54,7 +51,6 @@ export async function POST() {
         .maybeSingle();
 
     if (!existing) {
-        // Yoksa yeni satır ekle
         const { error: insertError } = await supabase
             .from('organization_usage')
             .insert({
@@ -69,7 +65,6 @@ export async function POST() {
             return NextResponse.json({ error: 'Failed to insert usage' }, { status: 500 });
         }
     } else {
-        // Varsa request_count'u 1 artır
         const { error: updateError } = await supabase
             .from('organization_usage')
             .update({ request_count: existing.request_count + 1 })
