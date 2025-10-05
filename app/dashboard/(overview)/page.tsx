@@ -6,6 +6,7 @@ import { lusitana } from '@/app/ui/fonts';
 import { Suspense } from 'react';
 import { RevenueChartSkeleton, LatestInvoicesSkeleton, CardsSkeleton } from '@/app/ui/skeletons';
 import CardWrapper from '@/app/ui/dashboard/cards';
+import UsageTest from '@/app/ui/dashboard/usage-test';
 
 export default async function Page() {
     return (
@@ -16,6 +17,14 @@ export default async function Page() {
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                 <Suspense fallback={<CardsSkeleton />}>
                     <CardWrapper />
+                    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                        <Suspense fallback={<CardsSkeleton />}>
+                            <CardWrapper />
+                        </Suspense>
+                    </div>
+                    <div className="mt-4">
+                        <UsageTest />
+                    </div>
                 </Suspense>
             </div>
             <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-4 lg:grid-cols-8">

@@ -1,15 +1,14 @@
 // app/lib/data.ts
-import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import type {
-  Organization,
-  Project,
-  OrganizationUsage,
-  ProjectForm,
-} from './definitions';
+import { supabaseAdmin } from '@/app/lib/supabaseAdmin';
+import type { Organization, Project, OrganizationUsage } from '@/app/lib/definitions';
+
+/* -------------------------
+   Organization / projects
+   ------------------------- */
 
 export async function getOrganizationsByOwner(ownerId: string): Promise<Organization[]> {
   const { data, error } = await supabaseAdmin
-    .from<Organization>('organizations')
+    .from('organizations')
     .select('*')
     .eq('owner_id', ownerId)
     .eq('is_active', true);
@@ -20,7 +19,7 @@ export async function getOrganizationsByOwner(ownerId: string): Promise<Organiza
 
 export async function getOrganizationById(orgId: string): Promise<Organization | null> {
   const { data, error } = await supabaseAdmin
-    .from<Organization>('organizations')
+    .from('organizations')
     .select('*')
     .eq('id', orgId)
     .maybeSingle();
@@ -31,7 +30,7 @@ export async function getOrganizationById(orgId: string): Promise<Organization |
 
 export async function getProjects(orgId: string): Promise<Project[]> {
   const { data, error } = await supabaseAdmin
-    .from<Project>('projects')
+    .from('projects')
     .select('*')
     .eq('organization_id', orgId);
 
@@ -39,14 +38,10 @@ export async function getProjects(orgId: string): Promise<Project[]> {
   return data ?? [];
 }
 
-export async function createProject(payload: ProjectForm): Promise<Project> {
+export async function createProject(payload: Project): Promise<Project> {
   const { data, error } = await supabaseAdmin
-    .from<Project>('projects')
-    .insert({
-      name: payload.name,
-      organization_id: payload.organization_id,
-      is_active: payload.is_active ?? true,
-    })
+    .from('projects')
+    .insert(payload)
     .select()
     .single();
 
@@ -54,13 +49,10 @@ export async function createProject(payload: ProjectForm): Promise<Project> {
   return data;
 }
 
-export async function updateProject(id: string, payload: Partial<ProjectForm>): Promise<Project> {
+export async function updateProject(id: string, payload: Partial<Project>): Promise<Project> {
   const { data, error } = await supabaseAdmin
-    .from<Project>('projects')
-    .update({
-      name: payload.name,
-      is_active: payload.is_active,
-    })
+    .from('projects')
+    .update(payload)
     .eq('id', id)
     .select()
     .single();
@@ -74,63 +66,57 @@ export async function deleteProject(id: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
-/**
- * Get usage rows for an organization (ordered desc by period_start_at)
- */
+/* -------------------------
+   Organization usage
+   ------------------------- */
+
 export async function getOrganizationUsage(orgId: string): Promise<OrganizationUsage[]> {
   const { data, error } = await supabaseAdmin
-    .from<OrganizationUsage>('organization_usage')
+    .from('organization_usage')
     .select('*')
     .eq('organization_id', orgId)
-    .order('period_start_at', { ascending: false });
+    .order('period_start_at', { ascending: false })
+    .limit(12);
 
   if (error) throw new Error(error.message);
   return data ?? [];
 }
 
-/**
- * Increment usage for the current monthly period.
- * - If a row exists for (organization_id, period_start_at) => update request_count & api_calls
- * - Otherwise insert a new row with period_start_at = start of month UTC
- */
 export async function incrementOrganizationUsage(orgId: string, incrementBy = 1): Promise<void> {
-  // Calculate period boundaries in UTC (start and end of current month)
   const now = new Date();
-  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0));
-  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59, 999));
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59));
 
   const periodStartIso = start.toISOString();
   const periodEndIso = end.toISOString();
 
-  // Check if exists
-  const { data: existing, error: selErr } = await supabaseAdmin
+  const { data: existing, error: selectError } = await supabaseAdmin
     .from('organization_usage')
     .select('*')
     .eq('organization_id', orgId)
     .eq('period_start_at', periodStartIso)
     .maybeSingle();
 
-  if (selErr) throw new Error(selErr.message);
+  if (selectError) throw new Error(selectError.message);
 
   if (!existing) {
-    const { error: insErr } = await supabaseAdmin.from('organization_usage').insert({
+    const { error } = await supabaseAdmin.from('organization_usage').insert({
       organization_id: orgId,
       period_start_at: periodStartIso,
       period_end_at: periodEndIso,
       request_count: incrementBy,
-      api_calls: incrementBy,
-      data_stored_mb: 0,
     });
-    if (insErr) throw new Error(insErr.message);
-  } else {
-    const { error: updErr } = await supabaseAdmin
-      .from('organization_usage')
-      .update({
-        request_count: (existing.request_count ?? 0) + incrementBy,
-        api_calls: (existing.api_calls ?? 0) + incrementBy,
-      })
-      .eq('organization_id', orgId)
-      .eq('period_start_at', periodStartIso);
-    if (updErr) throw new Error(updErr.message);
+    if (error) throw new Error(error.message);
+    return;
   }
+
+  const { error: updateError } = await supabaseAdmin
+    .from('organization_usage')
+    .update({
+      request_count: (existing.request_count ?? 0) + incrementBy,
+    })
+    .eq('organization_id', orgId)
+    .eq('period_start_at', periodStartIso);
+
+  if (updateError) throw new Error(updateError.message);
 }
