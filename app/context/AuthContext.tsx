@@ -10,12 +10,14 @@ type AuthContextType = {
     user: User | null;
     organization: Organization | null;
     loading: boolean;
+    refreshOrganization: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType>({
     user: null,
     organization: null,
     loading: true,
+    refreshOrganization: async () => { },
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -27,47 +29,74 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const router = useRouter();
     const pathname = usePathname();
 
+    // 1️⃣ Kullanıcı session kontrolü (ilk yükleme)
     useEffect(() => {
-        async function loadUser() {
+        let mounted = true;
+
+        async function initAuth() {
             const { data } = await supabase.auth.getUser();
-            setUser(data.user ?? null);
-            setLoading(false);
+            if (mounted) {
+                setUser(data.user ?? null);
+                setLoading(false);
+            }
         }
 
-        loadUser();
+        initAuth();
 
         const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
             setUser(session?.user ?? null);
             setLoading(false);
-            if (session?.user && pathname.startsWith('/(auth)')) {
-                router.push('/dashboard');
-            }
         });
 
         return () => {
+            mounted = false;
             listener.subscription.unsubscribe();
         };
-    }, [pathname, router, supabase]);
+    }, [supabase]);
 
-    // Org bilgisini user değişince çek
-    useEffect(() => {
+    // 2️⃣ Organizasyon bilgisini çek
+    const refreshOrganization = async () => {
         if (!user) {
             setOrganization(null);
             return;
         }
-        async function fetchOrg() {
-            const { data, error } = await supabase
-                .from('organizations')
-                .select('*')
-                .eq('owner_id', user?.id)
-                .maybeSingle();
-            if (!error) setOrganization(data);
+
+        const { data, error } = await supabase
+            .from('organizations')
+            .select('*')
+            .eq('owner_id', user.id)
+            .maybeSingle();
+
+        if (!error) setOrganization(data);
+        else setOrganization(null);
+    };
+
+    useEffect(() => {
+        if (user) {
+            refreshOrganization();
+        } else {
+            setOrganization(null);
         }
-        fetchOrg();
-    }, [user, supabase]);
+    }, [user]);
+
+    // 3️⃣ Login olmuş kullanıcı login sayfasına giderse → dashboard’a at
+    useEffect(() => {
+        if (loading) return;
+        if (user && pathname.startsWith('/(auth)')) {
+            router.replace('/dashboard');
+        }
+    }, [user, loading, pathname, router]);
+
+    // 4️⃣ Login olmamış kullanıcı dashboard'a giderse → login’e at
+    useEffect(() => {
+        if (loading) return;
+        if (!user && pathname.startsWith('/dashboard')) {
+            router.replace('/login');
+        }
+    }, [user, loading, pathname, router]);
 
     return (
-        <AuthContext.Provider value={{ user, organization, loading }}>
+        <AuthContext.Provider value={{ user, organization, loading, refreshOrganization }}>
             {children}
         </AuthContext.Provider>
     );

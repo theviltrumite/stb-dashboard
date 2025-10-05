@@ -1,16 +1,26 @@
-// app/dashboard/guard.tsx
-import { redirect } from 'next/navigation';
-import { getSession } from '@/app/lib/getSession';
+'use client';
 
-export default async function Guard({
-    children,
-}: {
-    children: React.ReactNode;
-}) {
-    const user = await getSession();
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/app/context/AuthContext';
 
-    if (!user) {
-        redirect('/login');
+export default function Guard({ children }: { children: React.ReactNode }) {
+    const { user, loading } = useAuth();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (loading) return;
+        if (!user) {
+            router.replace('/login');
+        }
+    }, [user, loading, router]);
+
+    if (loading) {
+        return (
+            <div className="flex h-screen items-center justify-center">
+                <p>Loading...</p>
+            </div>
+        );
     }
 
     return <>{children}</>;

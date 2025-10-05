@@ -1,11 +1,20 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/app/context/AuthContext';
 
 export default function TestButton() {
     const [loading, setLoading] = useState(false);
+    const { organization } = useAuth();
+    const router = useRouter();
 
     const handleClick = async () => {
+        if (!organization) {
+            router.push('/no-org');
+            return;
+        }
+
         setLoading(true);
         const res = await fetch('/api/test', { method: 'POST' });
         setLoading(false);

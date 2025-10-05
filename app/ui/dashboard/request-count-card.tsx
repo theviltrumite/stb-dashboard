@@ -46,14 +46,29 @@ export default function RequestCountCard() {
         },
         (payload) => {
           type UsagePayload = {
-            request_count?: number;
+            organization_id: string;
+            period_start_at: string;
+            request_count: number;
           };
 
-          const newCount = (payload.new as UsagePayload)?.request_count;
-          if (typeof newCount === 'number') {
-            setCount(newCount);
-          }
-
+          supabase
+            .channel('org-usage')
+            .on(
+              'postgres_changes',
+              {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'organization_usage',
+                filter: `organization_id=eq.${organization.id}`,
+              },
+              (payload) => {
+                const data = payload.new as UsagePayload;  // ✅ Type cast
+                if (data?.request_count !== undefined) {
+                  setCount(data.request_count);
+                }
+              }
+            )
+            .subscribe();
         }
       )
       .subscribe();

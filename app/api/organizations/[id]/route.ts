@@ -1,0 +1,45 @@
+// app/api/organizations/[id]/route.ts
+import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+
+export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+    const cookieStore = cookies();
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const { name } = await req.json();
+    if (!name) return NextResponse.json({ error: 'Name required' }, { status: 400 });
+
+    const { data, error } = await supabase
+        .from('organizations')
+        .update({ name })
+        .eq('id', params.id)
+        .eq('owner_id', user.id)
+        .select()
+        .single();
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    return NextResponse.json({ organization: data });
+}
+
+export async function DELETE(_: Request, { params }: { params: { id: string } }) {
+    const cookieStore = cookies();
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const { error } = await supabase
+        .from('organizations')
+        .delete()
+        .eq('id', params.id)
+        .eq('owner_id', user.id);
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    return NextResponse.json({ success: true });
+}
