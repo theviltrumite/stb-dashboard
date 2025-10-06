@@ -562,7 +562,7 @@ export default function Page() {
               src="/main-desktop.png"
               width={1000}
               height={760}
-              className="hidden sm:hidden lg:hidden md:block rounded-lg shadow-lg"
+              className="hidden sm:hidden lg:hidden md:block rounded-lg shadow-lg py-0"
               alt="Dashboard desktop version"
             />
             {/* <Image
