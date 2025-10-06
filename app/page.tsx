@@ -451,6 +451,7 @@ export default function Page() {
         </motion.div>
 
         <div className="mt-6 flex grow flex-col gap-6 md:flex-row items-stretch">
+          {/* Left side */}
           <motion.div
             initial={{ x: -30, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
@@ -480,6 +481,7 @@ export default function Page() {
             </motion.div>
           </motion.div>
 
+          {/* Right side */}
           <motion.div
             initial={{ x: 30, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
@@ -487,6 +489,7 @@ export default function Page() {
             className="flex items-center justify-center lg:w-3/5 lg:px-28 lg:py-12"
           >
 
+            {/* Aceternity Map */}
             <div className="hidden lg:block w-full">
               <div className="pt-10 pb-20 dark:bg-black bg-transparent w-full">
                 <div className="max-w-7xl mx-auto text-center">
@@ -548,7 +551,8 @@ export default function Page() {
               </div>
             </div>
 
-            <div className="block md:hidden relative w-full min-h-[400px] py-10 bg-transparent dark:bg-transparent">
+            {/* Globe for mobile and tablet */}
+            <div className="block md:hidden relative w-full min-h-[400px] py-0 bg-transparent dark:bg-transparent">
               <div className="max-w-7xl mx-auto w-full relative overflow-hidden h-full">
                 <div className="absolute w-full bottom-0 inset-x-0 h-40 bg-gradient-to-b pointer-events-none select-none from-transparent dark:to-black z-40" />
 
@@ -558,6 +562,7 @@ export default function Page() {
               </div>
             </div>
 
+            {/* Image for tablet */}
             <Image
               src="/main-desktop.png"
               width={1000}
