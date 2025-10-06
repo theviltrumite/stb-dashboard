@@ -552,7 +552,7 @@ export default function Page() {
             </div>
 
             {/* Globe for mobile and tablet */}
-            <div className="block md:hidden relative w-full min-h-[400px] py-0 bg-transparent dark:bg-transparent">
+            <div className="block md:hidden relative w-full min-h-[300px] py-0 bg-transparent dark:bg-transparent">
               <div className="max-w-7xl mx-auto w-full relative overflow-hidden h-full">
                 <div className="absolute w-full bottom-0 inset-x-0 h-40 bg-gradient-to-b pointer-events-none select-none from-transparent dark:to-black z-40" />
 
