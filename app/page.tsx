@@ -8,10 +8,12 @@ import Image from 'next/image';
 import WorldMap from '@/components/ui/world-map';
 import { motion } from "framer-motion";
 import dynamic from "next/dynamic";
+import GlobeLoader from "@/components/ui/globe-loader";
 import Head from "next/head";
 
 const World = dynamic(() => import("@/components/ui/globe").then((m) => m.World), {
   ssr: false,
+  loading: () => <GlobeLoader />,
 });
 
 export default function Page() {
@@ -555,12 +557,12 @@ export default function Page() {
             <div className="block md:hidden relative w-full min-h-[300px] py-0 bg-transparent dark:bg-transparent">
               <div className="max-w-7xl mx-auto w-full relative overflow-hidden h-full">
                 <div className="absolute w-full bottom-0 inset-x-0 h-40 bg-gradient-to-b pointer-events-none select-none from-transparent dark:to-black z-40" />
-
                 <div className="relative w-full h-[300px] z-10 flex items-center justify-center">
                   <World data={sampleArcs} globeConfig={globeConfig} />
                 </div>
               </div>
             </div>
+
 
             {/* Image for tablet */}
             <Image
