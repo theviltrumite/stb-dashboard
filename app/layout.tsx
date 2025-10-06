@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     template: '%s | STB Dashboard',
     default: 'STB Dashboard',
   },
-  description: 'STB Dashboard app',
+  description: 'STB dijital dönüşüm platformu.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
